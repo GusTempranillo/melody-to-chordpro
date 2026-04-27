@@ -57,7 +57,7 @@ def process_audio(
 
 # ── UI layout ────────────────────────────────────────────────────────────────
 
-with gr.Blocks(title="Melody → ChordPro", theme=gr.themes.Soft()) as demo:
+with gr.Blocks(title="Melody → ChordPro") as demo:
     gr.Markdown(
         """
         # 🎵 Melody → ChordPro
@@ -110,7 +110,6 @@ with gr.Blocks(title="Melody → ChordPro", theme=gr.themes.Soft()) as demo:
                 label="📄 Resultado ChordPro",
                 lines=20,
                 max_lines=40,
-                show_copy_button=True,
             )
             download_output = gr.File(label="⬇ Descargar .cho")
 
@@ -139,4 +138,4 @@ with gr.Blocks(title="Melody → ChordPro", theme=gr.themes.Soft()) as demo:
 
 
 if __name__ == "__main__":
-    demo.launch()
+    demo.launch(theme=gr.themes.Soft())

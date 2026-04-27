@@ -11,6 +11,15 @@ import os
 import tempfile
 from pathlib import Path
 
+# Garantizar que ffmpeg (instalado por winget) está en el PATH en Windows
+_FFMPEG_BIN = (
+    r"C:\Users\Usuario\AppData\Local\Microsoft\WinGet\Packages"
+    r"\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe"
+    r"\ffmpeg-8.1-full_build\bin"
+)
+if os.path.isdir(_FFMPEG_BIN) and _FFMPEG_BIN not in os.environ.get("PATH", ""):
+    os.environ["PATH"] = _FFMPEG_BIN + os.pathsep + os.environ.get("PATH", "")
+
 import gradio as gr
 
 from app.pipeline import MelodyPipeline, PipelineConfig

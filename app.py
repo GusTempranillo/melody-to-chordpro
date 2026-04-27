@@ -20,6 +20,9 @@ def process_audio(
     audio_path: str,
     title: str,
     artist: str,
+    use_whisper: bool,
+    whisper_model: str,
+    whisper_language: str,
     window_size: float,
     confidence: float,
 ) -> tuple[str, str, str]:
@@ -30,26 +33,31 @@ def process_audio(
     title = title.strip() or Path(audio_path).stem
     artist = artist.strip()
 
+    lang = None if whisper_language == "auto" else whisper_language
+
     config = PipelineConfig(
         chord_window_size=window_size,
         confidence_threshold=confidence,
-        use_whisper=False,
+        use_whisper=use_whisper,
+        whisper_model=whisper_model,
+        whisper_language=lang,
     )
     pipeline = MelodyPipeline(config)
 
     try:
         result = pipeline.run(audio_path, title=title, artist=artist)
-    except ValueError as e:
+    except Exception as e:
         return "", f"❌ Error: {e}", None
 
+    lyrics_status = "con letra (Whisper)" if result.lyrics else "sin letra"
     summary_lines = [
         f"**Tonalidad:** {result.key_name}",
         f"**Notas detectadas:** {len(result.notes)}",
         f"**Acordes sugeridos:** {len(result.chords)}",
         f"**Progresión:** {' → '.join(ch.display_name for ch in result.chords)}",
+        f"**Letra:** {lyrics_status}",
     ]
 
-    # Write .cho file to a temp location for download
     tmp = tempfile.NamedTemporaryFile(
         suffix=".cho", delete=False, mode="w", encoding="utf-8"
     )
@@ -89,6 +97,25 @@ with gr.Blocks(title="Melody → ChordPro") as demo:
                 placeholder="(opcional)",
                 max_lines=1,
             )
+
+            with gr.Accordion("🎙️ Transcripción de letra (Whisper)", open=True):
+                use_whisper_check = gr.Checkbox(
+                    label="Transcribir letra automáticamente",
+                    value=False,
+                )
+                with gr.Row():
+                    whisper_model_radio = gr.Radio(
+                        choices=["tiny", "base", "small", "medium"],
+                        value="small",
+                        label="Modelo",
+                        info="tiny=rápido, small=equilibrado, medium=preciso",
+                    )
+                    whisper_lang_dropdown = gr.Dropdown(
+                        choices=["auto", "es", "en", "fr", "pt", "de", "it"],
+                        value="es",
+                        label="Idioma",
+                    )
+
             with gr.Accordion("⚙️ Opciones avanzadas", open=False):
                 window_slider = gr.Slider(
                     minimum=0.5,
@@ -96,7 +123,7 @@ with gr.Blocks(title="Melody → ChordPro") as demo:
                     value=2.0,
                     step=0.5,
                     label="Ventana de acordes (segundos)",
-                    info="Más bajo = más cambios de acorde. Más alto = progresión más simple.",
+                    info="Más bajo = más cambios. Más alto = progresión más simple.",
                 )
                 confidence_slider = gr.Slider(
                     minimum=0.3,
@@ -104,8 +131,9 @@ with gr.Blocks(title="Melody → ChordPro") as demo:
                     value=0.65,
                     step=0.05,
                     label="Umbral de confianza del pitch",
-                    info="Más bajo = más notas detectadas (pero más ruido). Más alto = solo notas claras.",
+                    info="Más bajo = más notas (y más ruido). Más alto = solo notas claras.",
                 )
+
             run_btn = gr.Button("▶ Analizar", variant="primary", size="lg")
 
         with gr.Column(scale=2):
@@ -119,7 +147,11 @@ with gr.Blocks(title="Melody → ChordPro") as demo:
 
     run_btn.click(
         fn=process_audio,
-        inputs=[audio_input, title_input, artist_input, window_slider, confidence_slider],
+        inputs=[
+            audio_input, title_input, artist_input,
+            use_whisper_check, whisper_model_radio, whisper_lang_dropdown,
+            window_slider, confidence_slider,
+        ],
         outputs=[chordpro_output, summary_output, download_output],
     )
 
@@ -129,8 +161,8 @@ with gr.Blocks(title="Melody → ChordPro") as demo:
         ### Cómo interpretar el resultado
         - Los **acordes** aparecen entre corchetes: `[Am]`, `[G]`, `[F]`
         - Los **tiempos** indican cuándo cambia cada acorde
-        - Sin Whisper instalado, la letra aparece como marcadores de posición
-        - Para añadir transcripción automática de letra, activa Whisper en el servidor
+        - Con Whisper activo, la letra se alinea automáticamente con los acordes
+        - La primera vez que uses Whisper descargará el modelo (~150MB para "small")
 
         ### Formato ChordPro
         Compatible con [OpenSong](https://opensong.org), [Chordpro.org](https://www.chordpro.org),

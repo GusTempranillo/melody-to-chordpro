@@ -315,7 +315,7 @@ CSS = """
 footer { display: none !important; }
 """
 
-with gr.Blocks(title="Melody → ChordPro") as demo:
+with gr.Blocks(title="Melody → ChordPro", css=CSS) as demo:
     gr.Markdown(
         """
         # 🎵 Melody → ChordPro
@@ -404,4 +404,4 @@ with gr.Blocks(title="Melody → ChordPro") as demo:
 
 
 if __name__ == "__main__":
-    demo.launch(theme=gr.themes.Soft(), css=CSS)
+    demo.launch()

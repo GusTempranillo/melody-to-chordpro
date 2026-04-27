@@ -3,6 +3,10 @@ app.py — Gradio UI for melody-to-chordpro
 Hugging Face Spaces entry point.
 """
 
+import sys
+sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
 import os
 import tempfile
 from pathlib import Path

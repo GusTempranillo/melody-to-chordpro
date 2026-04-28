@@ -346,11 +346,11 @@ with gr.Blocks(title="Melody → ChordPro", css=CSS) as demo:
             with gr.Accordion("🎙️ Letra con Whisper", open=True):
                 use_whisper_check = gr.Checkbox(
                     label="Transcribir letra automáticamente",
-                    value=False,
+                    value=True,
                 )
                 whisper_model_radio = gr.Radio(
                     choices=["tiny", "base", "small", "medium"],
-                    value="small",
+                    value="medium",
                     label="Modelo",
                     info="tiny=rápido | small=equilibrado | medium=preciso",
                 )

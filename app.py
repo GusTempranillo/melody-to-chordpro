@@ -189,7 +189,7 @@ def _render_lyrics_with_chords(result: ChordProResult, color_map: dict) -> str:
                 )
             else:
                 chord_row += f'<span style="min-width:{cell_w}ch;display:inline-block;"> </span>'
-            word_row += f'<span style="min-width:{cell_w}ch;display:inline-block;">{word} </span>'
+            word_row += f'<span style="min-width:{cell_w}ch;display:inline-block;color:#1f2937;">{word} </span>'
 
         html_lines.append(f"""
         <div style="margin-bottom:18px;">

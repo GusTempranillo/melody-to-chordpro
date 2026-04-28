@@ -86,9 +86,10 @@ class MelodyPipeline:
 
         # ── Estación 2: Transcribir letra (opcional) ────────
         lyrics = None
+        lyrics_segments = None
         if self.config.use_whisper:
             print("\n[ 2/5 ] Transcribiendo letra con Whisper...")
-            lyrics = self._transcribe(audio_path)
+            lyrics, lyrics_segments = self._transcribe(audio_path)
         else:
             print("\n[ 2/5 ] Whisper desactivado — omitiendo transcripción de letra")
 
@@ -121,6 +122,7 @@ class MelodyPipeline:
             chords=chords,
             duration=audio["duration"],
             lyrics=lyrics,
+            lyrics_segments=lyrics_segments,
             title=title,
             artist=artist,
         )
@@ -139,17 +141,17 @@ class MelodyPipeline:
 
         return result
 
-    def _transcribe(self, audio_path: str | Path) -> str | None:
+    def _transcribe(self, audio_path: str | Path) -> tuple[str | None, list | None]:
         """
         Transcribe la letra con Whisper (si está instalado).
-        Si no está disponible, devuelve None sin romper el pipeline.
+        Devuelve (texto_completo, segmentos_con_timestamps).
         """
         try:
             import whisper  # type: ignore
         except ImportError:
             print("  ⚠️  Whisper no instalado. Instala con:")
             print("       pip install openai-whisper")
-            return None
+            return None, None
 
         if self._whisper_model is None:
             print(f"  Cargando modelo Whisper '{self.config.whisper_model}'...")
@@ -159,7 +161,11 @@ class MelodyPipeline:
             str(audio_path),
             language=self.config.whisper_language,
             task="transcribe",
+            word_timestamps=True,        # timestamps por palabra para alineación exacta
+            condition_on_previous_text=False,  # evita bucles de repetición
+            no_speech_threshold=0.9,     # no omite secciones por "silencio" prematuro
         )
         lyrics = result.get("text", "").strip()
-        print(f"  Letra: {lyrics[:100]}{'...' if len(lyrics) > 100 else ''}")
-        return lyrics
+        segments = result.get("segments", [])
+        print(f"  Segmentos: {len(segments)} | Letra: {lyrics[:100]}{'...' if len(lyrics) > 100 else ''}")
+        return lyrics, segments

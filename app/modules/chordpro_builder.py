@@ -34,7 +34,8 @@ class ChordProResult:
     tempo_bpm: float
     notes: list[DetectedNote]
     chords: list[ChordSuggestion]
-    lyrics: str | None  # None si Whisper no está disponible
+    lyrics: str | None           # None si Whisper no está disponible
+    lyrics_segments: list | None = None  # segmentos Whisper con timestamps por palabra
 
 
 class ChordProBuilder:
@@ -49,6 +50,7 @@ class ChordProBuilder:
         chords: list[ChordSuggestion],
         duration: float,
         lyrics: str | None = None,
+        lyrics_segments: list | None = None,
         title: str = "Mi Canción",
         artist: str = "",
         tempo_bpm: float = 0,
@@ -141,6 +143,7 @@ class ChordProBuilder:
             notes=notes,
             chords=chords,
             lyrics=lyrics,
+            lyrics_segments=lyrics_segments,
         )
 
     def save(self, result: ChordProResult, output_path: str | Path) -> Path:

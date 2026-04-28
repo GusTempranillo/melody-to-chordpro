@@ -143,14 +143,26 @@ def build_visual_html(result: ChordProResult, title: str, artist: str) -> str:
 
 def _render_lyrics_with_chords(result: ChordProResult, color_map: dict) -> str:
     """Renderiza la letra con los acordes encima de cada bloque."""
-    words = result.lyrics.split()
-    if not words:
+
+    # Construir lista de (palabra, tiempo_inicio) desde timestamps reales de Whisper
+    word_times: list[tuple[str, float]] = []
+    if result.lyrics_segments:
+        for seg in result.lyrics_segments:
+            for w in seg.get("words", []):
+                text = w.get("word", "").strip()
+                if text:
+                    word_times.append((text, float(w.get("start", 0.0))))
+
+    # Fallback: distribución proporcional si no hay timestamps
+    if not word_times and result.lyrics:
+        words = result.lyrics.split()
+        duration = result.chords[-1].end_time if result.chords else 1
+        step = duration / max(len(words), 1)
+        word_times = [(w, i * step) for i, w in enumerate(words)]
+
+    if not word_times:
         return ""
 
-    duration = result.chords[-1].end_time if result.chords else 1
-    word_duration = duration / max(len(words), 1)
-
-    # Asignar acorde a cada palabra
     def chord_at(t):
         for ch in result.chords:
             if ch.start_time <= t < ch.end_time:
@@ -158,11 +170,10 @@ def _render_lyrics_with_chords(result: ChordProResult, color_map: dict) -> str:
         return result.chords[-1] if result.chords else None
 
     lines_out = []
-    chunk = []        # (word, chord_name_or_None)
+    chunk = []
     current_chord = None
 
-    for i, word in enumerate(words):
-        t = i * word_duration
+    for i, (word, t) in enumerate(word_times):
         ch = chord_at(t)
         ch_name = ch.display_name if ch else None
         is_new = ch_name != current_chord

@@ -361,9 +361,9 @@ with gr.Blocks(title="Melody → ChordPro", css=CSS) as demo:
                 )
                 whisper_model_radio = gr.Radio(
                     choices=["tiny", "base", "small", "medium"],
-                    value="medium",
+                    value="small",
                     label="Modelo",
-                    info="tiny=rápido | small=equilibrado | medium=preciso",
+                    info="tiny=~15s | base=~30s | small=~1min | medium=~4min",
                 )
                 whisper_lang_dropdown = gr.Dropdown(
                     choices=["auto", "es", "en", "fr", "pt", "de", "it"],

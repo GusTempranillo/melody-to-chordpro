@@ -12,6 +12,9 @@ Este módulo es el capataz que supervisa todo el proceso.
 from pathlib import Path
 from dataclasses import dataclass
 
+# Caché de modelos Whisper para no recargarlos entre peticiones
+_WHISPER_CACHE: dict = {}
+
 from app.modules.audio_loader import AudioLoader
 from app.modules.pitch_detector import PitchDetector, Note
 from app.modules.tonal_analyzer import TonalAnalyzer, TonalResult
@@ -30,7 +33,7 @@ class PipelineConfig:
     # Whisper (opcional)
     use_whisper: bool = False
     whisper_model: str = "small"   # tiny | base | small | medium | large
-    whisper_language: str = "es"   # "es" para español, None para autodetectar
+    whisper_language: str | None = "es"  # None = autodetectar
     # Output
     output_dir: str = "outputs"
 
@@ -143,29 +146,46 @@ class MelodyPipeline:
 
     def _transcribe(self, audio_path: str | Path) -> tuple[str | None, list | None]:
         """
-        Transcribe la letra con Whisper (si está instalado).
-        Devuelve (texto_completo, segmentos_con_timestamps).
+        Transcribe la letra con faster-whisper (4× más rápido que openai-whisper).
+        Devuelve (texto_completo, segmentos_con_timestamps_por_palabra).
         """
         try:
-            import whisper  # type: ignore
+            from faster_whisper import WhisperModel  # type: ignore
         except ImportError:
-            print("  ⚠️  Whisper no instalado. Instala con:")
-            print("       pip install openai-whisper")
+            print("  ⚠️  faster-whisper no instalado. Instala con:")
+            print("       pip install faster-whisper")
             return None, None
 
-        if self._whisper_model is None:
-            print(f"  Cargando modelo Whisper '{self.config.whisper_model}'...")
-            self._whisper_model = whisper.load_model(self.config.whisper_model)
+        model_name = self.config.whisper_model
+        if model_name not in _WHISPER_CACHE:
+            print(f"  Cargando modelo '{model_name}' (primera vez, se cachea)...")
+            _WHISPER_CACHE[model_name] = WhisperModel(
+                model_name, device="cpu", compute_type="int8"
+            )
+        else:
+            print(f"  Modelo '{model_name}' ya cargado (caché).")
 
-        result = self._whisper_model.transcribe(
+        model = _WHISPER_CACHE[model_name]
+        segments_iter, info = model.transcribe(
             str(audio_path),
             language=self.config.whisper_language,
             task="transcribe",
-            word_timestamps=True,        # timestamps por palabra para alineación exacta
-            condition_on_previous_text=False,  # evita bucles de repetición
-            no_speech_threshold=0.9,     # no omite secciones por "silencio" prematuro
+            word_timestamps=True,
+            condition_on_previous_text=False,
+            no_speech_threshold=0.9,
         )
-        lyrics = result.get("text", "").strip()
-        segments = result.get("segments", [])
+
+        segments = []
+        full_text = ""
+        for seg in segments_iter:
+            words = []
+            if seg.words:
+                for w in seg.words:
+                    words.append({"word": w.word, "start": w.start, "end": w.end})
+            segments.append({"start": seg.start, "end": seg.end,
+                              "text": seg.text, "words": words})
+            full_text += seg.text
+
+        lyrics = full_text.strip()
         print(f"  Segmentos: {len(segments)} | Letra: {lyrics[:100]}{'...' if len(lyrics) > 100 else ''}")
         return lyrics, segments

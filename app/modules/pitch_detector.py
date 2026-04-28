@@ -55,7 +55,7 @@ class PitchDetector:
         confidence_threshold: float = 0.65,  # Descarta frames poco confiables
         min_note_duration: float = 0.08,      # Notas < 80ms se ignoran (ruido)
         frame_length: int = 2048,
-        hop_length: int = 512,
+        hop_length: int = 1024,
     ):
         self.confidence_threshold = confidence_threshold
         self.min_note_duration = min_note_duration
